@@ -16,6 +16,7 @@ const ConfigPage = () => {
     fontWeight: 'normal',
     layoutMode: 'onlyTitle',
     fontSize: '60px',
+    location: 'मुंबई',
   });
   const [topExtra, setTopExtra] = useState({
     visible: false,
@@ -51,6 +52,7 @@ const ConfigPage = () => {
         fontWeight: data?.fontWeight || 'normal',
         layoutMode: data?.layoutMode || 'onlyTitle',
         fontSize: data?.fontSize || '60px',
+        location: data?.location || 'मुंबई',
       });
 
       if (selected === 'top') {
@@ -97,6 +99,19 @@ const ConfigPage = () => {
   }, [bottomMode, headingText, scrollingText, selected]);
 
   useEffect(() => {
+    const commonRef = ref(database, 'common');
+    const unsubscribe = onValue(commonRef, (snapshot) => {
+      const data = snapshot.val();
+      setConfig((prev) => ({
+        ...prev,
+        location: data?.location || 'मुंबई',
+      }));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (selected === 'top' && config.layoutMode === 'titleWithVideo') {
       setTopExtra((prev) => ({
         ...prev,
@@ -123,8 +138,8 @@ const ConfigPage = () => {
 
   const handleSave = async () => {
     setSaving(true);
-
-    const payload: any = { ...config }; 
+    const { location, ...sectionPayload } = config; // ✅ Exclude location
+    const payload: any = sectionPayload;
 
     if (selected === 'bottom') {
       payload.bottomConfig = {
@@ -155,6 +170,7 @@ const ConfigPage = () => {
         update(ref(database, `sections/${section}`), { width: config.width })
       )
     );
+    await set(ref(database, 'common/location'), config.location);
 
     setSaving(false);
     alert(`${selected} section updated`);
@@ -517,6 +533,13 @@ const ConfigPage = () => {
           backgroundColor: selected === 'bottom' ? '#eee' : 'white',
           cursor: selected === 'bottom' ? 'not-allowed' : 'text',
         }}
+      />
+
+      <label>Location:</label>
+      <input
+        value={config.location}
+        onChange={(e) => handleChange('location', e.target.value)}
+        style={{ width: '100%', padding: '10px', marginBottom: '10px' }}
       />
 
       <label>Font Size (e.g., 40px, 3rem):</label>

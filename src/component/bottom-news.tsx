@@ -36,9 +36,9 @@ const FlipCard = ({ showFront }: { showFront: boolean }) => {
             fontWeight: 'bolder',
             color: 'white',
             backgroundColor: 'red',
-            padding: '6px 12px',
+            padding: '2px 12px',
             borderRadius: '6px',
-            letterSpacing: '2px',
+            letterSpacing: '4px',
           }}
         >
           LIVE
@@ -52,9 +52,9 @@ const FlipCard = ({ showFront }: { showFront: boolean }) => {
             fontWeight: 'bolder',
             color: 'white',
             backgroundColor: 'red',
-            padding: '6px 12px',
+            padding: '2px 12px',
             borderRadius: '6px',
-            letterSpacing: '2px',
+            letterSpacing: '4px',
           }}
         >
           LIVE
@@ -162,7 +162,7 @@ const BottomNews = () => {
     <div
       style={{
         position: 'absolute',
-        bottom: '20px',
+        bottom: '0px',
         left: '50%',
 
         transform: 'translateX(-50%)',
@@ -170,7 +170,7 @@ const BottomNews = () => {
         height: config.height,
         display: 'flex',
         border: `2px solid ${config.backgroundColor}`,
-        borderBottomLeftRadius: '25px',
+        // borderBottomLeftRadius: '25px',
         overflow: 'hidden',
         backgroundColor: 'white',
         maxWidth: '100%',
@@ -198,7 +198,7 @@ const BottomNews = () => {
           flexGrow: 1,
           backgroundColor: config.backgroundColor,
           borderLeft: '2px solid white',
-          borderBottomLeftRadius: '25px',
+          // borderBottomLeftRadius: '25px',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',

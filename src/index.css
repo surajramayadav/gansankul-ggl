@@ -39,6 +39,10 @@ html, body, #root {
   }
 }
 
+@keyframes blinker {
+  50% { opacity: 0; }
+}
+
 .scrolling-container {
   overflow: hidden;
   white-space: nowrap;
