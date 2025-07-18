@@ -7,6 +7,10 @@ const ConfigPage = () => {
   const [bottomMode, setBottomMode] = useState<'heading' | 'scrolling'>('heading');
   const [headingText, setHeadingText] = useState('');
   const [scrollingText, setScrollingText] = useState('');
+  const [timerText, setTimerText] = useState('');
+  const [timerDuration, setTimerDuration] = useState(0);
+  const [bottomOffsetVh, setBottomOffsetVh] = useState<number>(10);
+
   const [config, setConfig] = useState({
     text: '',
     width: '1000px',
@@ -16,7 +20,9 @@ const ConfigPage = () => {
     fontWeight: 'normal',
     layoutMode: 'onlyTitle',
     fontSize: '60px',
-    location: 'मुंबई',
+    location: '',
+    logoVisible: true,
+    bottomOffsetVh: bottomOffsetVh
   });
   const [topExtra, setTopExtra] = useState({
     visible: false,
@@ -52,7 +58,9 @@ const ConfigPage = () => {
         fontWeight: data?.fontWeight || 'normal',
         layoutMode: data?.layoutMode || 'onlyTitle',
         fontSize: data?.fontSize || '60px',
-        location: data?.location || 'मुंबई',
+        location: data?.location || '',
+        logoVisible: data?.logoVisible !== false,
+        bottomOffsetVh: data?.bottomOffsetVh || 10
       });
 
       if (selected === 'top') {
@@ -87,6 +95,17 @@ const ConfigPage = () => {
     return () => unsubscribe();
   }, [selected]);
 
+  useEffect(() => {
+    const timerRef = ref(database, 'common/timer');
+    return onValue(timerRef, (snap) => {
+      const val = snap.val();
+      if (val) {
+        setTimerText(val.text || '');
+        setTimerDuration(val.duration || 0);
+        setBottomOffsetVh(val.bottomOffsetVh);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (selected === 'bottom') {
@@ -104,7 +123,8 @@ const ConfigPage = () => {
       const data = snapshot.val();
       setConfig((prev) => ({
         ...prev,
-        location: data?.location || 'मुंबई',
+        location: data?.location || '',
+        logoVisible: data?.logoVisible !== false,
       }));
     });
 
@@ -171,6 +191,14 @@ const ConfigPage = () => {
       )
     );
     await set(ref(database, 'common/location'), config.location);
+    await update(ref(database, 'common'), { logoVisible: config.logoVisible });
+
+    const timerRef = ref(database, 'common/timer');
+    set(timerRef, {
+      text: timerText,
+      duration: timerDuration,
+      bottomOffsetVh: bottomOffsetVh
+    });
 
     setSaving(false);
     alert(`${selected} section updated`);
@@ -609,6 +637,63 @@ const ConfigPage = () => {
           onChange={(e) => handleChange('backgroundColor', e.target.value)}
           style={{ flex: 1, padding: '10px' }}
         />
+      </div>
+
+      <div style={{ marginBottom: '15px' }}>
+        <label style={{ display: 'block', marginBottom: '5px' }}>Logo Visibility:</label>
+        <label style={{ marginRight: '10px' }}>
+          <input
+            type="radio"
+            name="logoVisibility"
+            value="show"
+            checked={config.logoVisible !== false}
+            onChange={() => handleChange('logoVisible', true)}
+          /> Show
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="logoVisibility"
+            value="hide"
+            checked={config.logoVisible === false}
+            onChange={() => handleChange('logoVisible', false)}
+          /> Hide
+        </label>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <h3>⏳ Countdown Timer</h3>
+
+        <div style={{ marginBottom: '8px' }}>
+          <label>Timer Text:</label>
+          <input
+            type="text"
+            value={timerText}
+            onChange={(e) => setTimerText(e.target.value)}
+            placeholder="E.g. Time left for Aagman"
+            style={{ width: '100%' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '8px' }}>
+          <label>Duration (in seconds):</label>
+          <input
+            type="number"
+            value={timerDuration}
+            onChange={(e) => setTimerDuration(Number(e.target.value))}
+            placeholder="E.g. 600"
+            style={{ width: '100%' }}
+          />
+        </div>
+        <div>
+          <label>Timer Bottom Offset (vh):</label>
+          <input
+            type="number"
+            value={bottomOffsetVh}
+            onChange={(e) => setBottomOffsetVh(Number(e.target.value))}
+            style={{ marginLeft: 8 }}
+          />
+        </div>
       </div>
 
       <button

@@ -8,18 +8,65 @@ import { database } from '../firebase';
 const Dashboard = () => {
 
   const [location, setLocation] = useState('');
+  const [logoVisible, setLogoVisible] = useState(true);
+  const [timerText, setTimerText] = useState('');
+  const [timerDuration, setTimerDuration] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [bottomOffsetVh, setBottomOffsetVh] = useState(10);
 
   useEffect(() => {
     const locationRef = ref(database, 'common/location');
-    const unsubscribe = onValue(locationRef, (snapshot) => {
+    const timerRef = ref(database, 'common/timer');
+
+    const locationUnsub = onValue(locationRef, (snapshot) => {
       const val = snapshot.val();
-      if (typeof val === 'string') {
-        setLocation(val);
+      if (typeof val === 'string') setLocation(val);
+    });
+
+    const timerUnsub = onValue(timerRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data && typeof data.duration === 'number') {
+        setTimerText(data.text || '');
+        setTimerDuration(data.duration || 0);
+        setBottomOffsetVh(data.bottomOffsetVh || 10);
       }
     });
 
-    return () => unsubscribe();
+    const logoVisibleRef = ref(database, 'common/logoVisible');
+    const logoVisibleUnsubscribe = onValue(logoVisibleRef, (snapshot) => {
+      const val = snapshot.val();
+      setLogoVisible(val !== false);
+    });
+    return () => {
+      locationUnsub();
+      timerUnsub();
+      logoVisibleUnsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!timerText || timerDuration <= 0) return;
+
+    setTimeLeft(timerDuration);
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerText, timerDuration]);
+
+  const formatTime = (secs: number) => {
+    const minutes = Math.floor(secs / 60).toString().padStart(2, '0');
+    const seconds = (secs % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  };
 
   return (
     <>
@@ -86,18 +133,45 @@ const Dashboard = () => {
       </div>}
 
 
-      <img
-        src="/logo.png" // Make sure file is placed in public/logo.png
-        alt="Logo"
-        style={{
-          position: 'absolute',
-          right: '2.5vw',
-          height: '13%',
-          top: '2vh', // Adjust as needed
-          objectFit: 'contain',
-          zIndex: 1
-        }}
-      />
+      {logoVisible && (
+        <img
+          src="/logo.png"
+          alt="Logo"
+          style={{
+            position: 'absolute',
+            right: '2.5vw',
+            height: '13%',
+            top: '2vh',
+            objectFit: 'contain',
+            zIndex: 1
+          }}
+        />
+      )}
+      {timerText && timeLeft > 0 && (
+        <div
+  style={{
+    position: 'absolute',
+    left: '50%',
+    bottom: `${bottomOffsetVh}vh`,
+    transform: 'translate(-50%, -50%)',
+    color: 'white',
+    padding: '12px 24px',
+    fontSize: '3rem',
+    fontWeight: 'bold',
+    zIndex: 10,
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    textShadow: `
+      0 0 2px rgba(0,0,0,0.5),
+      1px 1px 2px rgba(0,0,0,0.4),
+      -1px -1px 2px rgba(0,0,0,0.4)
+    `
+  }}
+>
+  {timerText} {formatTime(timeLeft)}
+</div>
+
+      )}
 
     </>
   );
