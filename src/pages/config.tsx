@@ -123,7 +123,8 @@ const ConfigPage = () => {
       const data = snapshot.val();
       setConfig((prev) => ({
         ...prev,
-        location: data?.location || '',
+        ...data,
+        // location: data?.location || '',
         logoVisible: data?.logoVisible !== false,
       }));
     });
