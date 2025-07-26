@@ -163,7 +163,7 @@ const Dashboard = () => {
           position: 'absolute',
           bottom: '15vh',
           right: '3vw',
-          width: '7vw',
+          width: '10vw',
           height: 'auto',
           zIndex: 20,
         }}
