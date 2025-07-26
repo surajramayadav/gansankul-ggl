@@ -9,6 +9,7 @@ const Dashboard = () => {
 
   const [location, setLocation] = useState('');
   const [logoVisible, setLogoVisible] = useState(true);
+  const [qrVisible, setQrVisible] = useState(false);
   const [timerText, setTimerText] = useState('');
   const [timerDuration, setTimerDuration] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -16,11 +17,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     const locationRef = ref(database, 'common/location');
+    const qrVisibleRef = ref(database, 'common/qrVisible');
     const timerRef = ref(database, 'common/timer');
 
     const locationUnsub = onValue(locationRef, (snapshot) => {
       const val = snapshot.val();
       if (typeof val === 'string') setLocation(val);
+    });
+
+    const qrUnsub = onValue(qrVisibleRef, (snapshot) => {
+      setQrVisible(snapshot.val() === true); // 👈 Add this
     });
 
     const timerUnsub = onValue(timerRef, (snapshot) => {
@@ -37,10 +43,12 @@ const Dashboard = () => {
       const val = snapshot.val();
       setLogoVisible(val !== false);
     });
+
     return () => {
       locationUnsub();
       timerUnsub();
       logoVisibleUnsubscribe();
+      qrUnsub();
     };
   }, []);
 
@@ -147,29 +155,44 @@ const Dashboard = () => {
           }}
         />
       )}
+
+      {qrVisible && (<img
+        src="/images/qr/qr.jpg"
+        alt="QR Code"
+        style={{
+          position: 'absolute',
+          bottom: '15vh',
+          right: '3vw',
+          width: '7vw',
+          height: 'auto',
+          zIndex: 20,
+        }}
+      />
+      )}
+
       {timerText && timeLeft > 0 && (
         <div
-  style={{
-    position: 'absolute',
-    left: '50%',
-    bottom: `${bottomOffsetVh}vh`,
-    transform: 'translate(-50%, -50%)',
-    color: 'white',
-    padding: '12px 24px',
-    fontSize: '3rem',
-    fontWeight: 'bold',
-    zIndex: 10,
-    textAlign: 'center',
-    whiteSpace: 'nowrap',
-    textShadow: `
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: `${bottomOffsetVh}vh`,
+            transform: 'translate(-50%, -50%)',
+            color: 'white',
+            padding: '12px 24px',
+            fontSize: '3rem',
+            fontWeight: 'bold',
+            zIndex: 10,
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            textShadow: `
       0 0 2px rgba(0,0,0,0.5),
       1px 1px 2px rgba(0,0,0,0.4),
       -1px -1px 2px rgba(0,0,0,0.4)
     `
-  }}
->
-  {timerText} {formatTime(timeLeft)}
-</div>
+          }}
+        >
+          {timerText} {formatTime(timeLeft)}
+        </div>
 
       )}
 

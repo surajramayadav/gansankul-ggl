@@ -22,6 +22,7 @@ const ConfigPage = () => {
     fontSize: '60px',
     location: '',
     logoVisible: true,
+    qrVisible: true,
     bottomOffsetVh: bottomOffsetVh
   });
   const [topExtra, setTopExtra] = useState({
@@ -60,7 +61,8 @@ const ConfigPage = () => {
         fontSize: data?.fontSize || '60px',
         location: data?.location || '',
         logoVisible: data?.logoVisible !== false,
-        bottomOffsetVh: data?.bottomOffsetVh || 10
+        bottomOffsetVh: data?.bottomOffsetVh || 10,
+        qrVisible: data?.qrVisible !== false,
       });
 
       if (selected === 'top') {
@@ -122,10 +124,11 @@ const ConfigPage = () => {
     const unsubscribe = onValue(commonRef, (snapshot) => {
       const data = snapshot.val();
       setConfig((prev) => ({
-        ...prev,
+        ...prev,  
         ...data,
         // location: data?.location || '',
         logoVisible: data?.logoVisible !== false,
+        qrVisible: data?.qrVisible !== false, // 👈 Add this
       }));
     });
 
@@ -193,6 +196,7 @@ const ConfigPage = () => {
     );
     await set(ref(database, 'common/location'), config.location);
     await update(ref(database, 'common'), { logoVisible: config.logoVisible });
+    await update(ref(database, 'common'), { qrVisible: config.qrVisible });
 
     const timerRef = ref(database, 'common/timer');
     set(timerRef, {
@@ -658,6 +662,29 @@ const ConfigPage = () => {
             value="hide"
             checked={config.logoVisible === false}
             onChange={() => handleChange('logoVisible', false)}
+          /> Hide
+        </label>
+      </div>
+
+
+      <div style={{ marginBottom: '15px' }}>
+        <label style={{ display: 'block', marginBottom: '5px' }}>QR Visibility:</label>
+        <label style={{ marginRight: '10px' }}>
+          <input
+            type="radio"
+            name="qrVisibility"
+            value="show"
+            checked={config.qrVisible !== false}
+            onChange={() => handleChange('qrVisible', true)}
+          /> Show
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="qrVisibility"
+            value="hide"
+            checked={config.qrVisible === false}
+            onChange={() => handleChange('qrVisible', false)}
           /> Hide
         </label>
       </div>
