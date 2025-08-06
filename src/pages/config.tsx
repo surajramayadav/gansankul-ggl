@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ref, onValue, set, update } from 'firebase/database';
+import React, { useState, useEffect, useRef } from 'react';
+import { ref, onValue, set, update, off } from 'firebase/database';
 import { database } from '../firebase';
 
 const ConfigPage = () => {
-  const [selected, setSelected] = useState<'top' | 'middle' | 'bottom'>('middle');
+  const [selected, setSelected] = useState<'top' | 'middle' | 'bottom'>('bottom');
   const [bottomMode, setBottomMode] = useState<'heading' | 'scrolling'>('heading');
   const [headingText, setHeadingText] = useState('');
   const [scrollingText, setScrollingText] = useState('');
@@ -43,59 +43,85 @@ const ConfigPage = () => {
 
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    const sectionRef = ref(database, `sections/${selected}`);
-    setFetching(true);
 
-    const unsubscribe = onValue(sectionRef, (snapshot) => {
-      const data = snapshot.val();
+ const latestData = useRef({
+    section: null,
+    common: null,
+  });
 
-      setConfig({
-        text: data?.text || '',
-        width: data?.width || '1000px',
-        height: data?.height || '200px',
-        backgroundColor: data?.backgroundColor || 'red',
-        visible: data?.visible !== false,
-        fontWeight: data?.fontWeight || 'normal',
-        layoutMode: data?.layoutMode || 'onlyTitle',
-        fontSize: data?.fontSize || '60px',
-        location: data?.location || '',
-        logoVisible: data?.logoVisible !== false,
-        bottomOffsetVh: data?.bottomOffsetVh || 10,
-        qrVisible: data?.qrVisible !== false,
-      });
+useEffect(() => {
+  const sectionRef = ref(database, `sections/${selected}`);
+  const commonRef = ref(database, 'common');
 
-      if (selected === 'top') {
-        const extra = data?.topExtra || {};
-        setTopExtra({
-          visible: extra.visible !== false,
-          height: extra.height || '300px',
-          backgroundColor: extra.backgroundColor || 'darkred',
-          top: extra.top || '120px',
-          videoUrl: extra.videoUrl || '',
-          unloadAfter: extra.unloadAfter || 60000, // Default to 60 seconds
-          cloudConfig: extra.cloudConfig || {
-            cloudName: "surajyadav",
-            folder: "ganeshg-live",
-            subfolder: "padya-pujan",
-            totalImages: 4
-          }
-        });
-      }
+  setFetching(true);
 
-      // Load additional bottom config if selected
-      if (selected === 'bottom') {
-        const bottomCfg = data?.bottomConfig || {};
-        setBottomMode(bottomCfg.bottomMode || 'heading');
-        setHeadingText(bottomCfg.headingText || '');
-        setScrollingText(bottomCfg.scrollingText || '');
-      }
+ 
 
-      setFetching(false);
+  const updateConfig = () => {
+    const data:any = latestData.current.section;
+    const common:any = latestData.current.common;
+
+    if (!data || !common) return;
+
+    setConfig({
+      text: data?.text || '',
+      width: data?.width || '1000px',
+      height: data.height || '200px',
+      backgroundColor: data.backgroundColor || 'red',
+      visible: data.visible !== false,
+      fontWeight: data.fontWeight || 'normal',
+      layoutMode: data.layoutMode || 'onlyTitle',
+      fontSize: data.fontSize || '60px',
+      location: common.location || '',
+      logoVisible: data.logoVisible !== false,
+      bottomOffsetVh: data.bottomOffsetVh || 10,
+      qrVisible: data.qrVisible !== false,
     });
 
-    return () => unsubscribe();
-  }, [selected]);
+    if (selected === 'top') {
+      const extra = data.topExtra || {};
+      setTopExtra({
+        visible: extra.visible !== false,
+        height: extra.height || '300px',
+        backgroundColor: extra.backgroundColor || 'darkred',
+        top: extra.top || '120px',
+        videoUrl: extra.videoUrl || '',
+        unloadAfter: extra.unloadAfter || 60000,
+        cloudConfig: extra.cloudConfig || {
+          cloudName: "surajyadav",
+          folder: "ganeshg-live",
+          subfolder: "padya-pujan",
+          totalImages: 4,
+        },
+      });
+    }
+
+    if (selected === 'bottom') {
+      const bottomCfg = data.bottomConfig || {};
+      setBottomMode(bottomCfg.bottomMode || 'heading');
+      setHeadingText(bottomCfg.headingText || '');
+      setScrollingText(bottomCfg.scrollingText || '');
+    }
+
+    setFetching(false);
+  };
+
+  const sectionListener = onValue(sectionRef, (snapshot) => {
+    latestData.current.section = snapshot.val();
+    updateConfig();
+  });
+
+  const commonListener = onValue(commonRef, (snapshot) => {
+    latestData.current.common = snapshot.val();
+    updateConfig();
+  });
+
+  return () => {
+    off(sectionRef);
+    off(commonRef);
+  };
+}, [selected]);
+
 
   useEffect(() => {
     const timerRef = ref(database, 'common/timer');
