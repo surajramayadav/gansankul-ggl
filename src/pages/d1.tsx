@@ -11,7 +11,7 @@ const Dashboard = () => {
   const [logoVisible, setLogoVisible] = useState(true);
   const [qrVisible, setQrVisible] = useState(false);
   const [timerText, setTimerText] = useState('');
-  const [timerDuration, setTimerDuration] = useState(0);
+  const [timerDuration, setTimerDuration] = useState(''); // Change to string for 24-hour time
   const [timeLeft, setTimeLeft] = useState(0);
   const [bottomOffsetVh, setBottomOffsetVh] = useState(10);
 
@@ -31,9 +31,9 @@ const Dashboard = () => {
 
     const timerUnsub = onValue(timerRef, (snapshot) => {
       const data = snapshot.val();
-      if (data && typeof data.duration === 'number') {
+      if (data && typeof data.duration === 'string') { // Changed to string
         setTimerText(data.text || '');
-        setTimerDuration(data.duration || 0);
+        setTimerDuration(data.duration || ''); // Changed to string
         setBottomOffsetVh(data.bottomOffsetVh || 10);
       }
     });
@@ -53,9 +53,39 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!timerText || timerDuration <= 0) return;
+    if (!timerText || !timerDuration) return;
 
-    setTimeLeft(timerDuration);
+    // Parse timerDuration as 'HH.mm' (e.g., '14.30')
+    const [targetHour, targetMinute] = timerDuration.split('.').map(Number);
+    if (
+      isNaN(targetHour) ||
+      isNaN(targetMinute) ||
+      targetHour < 0 ||
+      targetHour > 23 ||
+      targetMinute < 0 ||
+      targetMinute > 59
+    ) {
+      setTimeLeft(0);
+      return;
+    }
+
+    // Get current IST time
+    const now = new Date();
+    // Convert to IST (UTC+5:30)
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const istNow = new Date(utc + 5.5 * 60 * 60 * 1000);
+
+    // Target time today in IST
+    const target = new Date(istNow);
+    target.setHours(targetHour, targetMinute, 0, 0);
+
+    // If target time is before now, assume it's for the next day
+    if (target < istNow) {
+      target.setDate(target.getDate() + 1);
+    }
+
+    const diffSeconds = Math.floor((target.getTime() - istNow.getTime()) / 1000);
+    setTimeLeft(diffSeconds);
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {

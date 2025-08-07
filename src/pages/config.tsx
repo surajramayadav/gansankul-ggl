@@ -8,7 +8,7 @@ const ConfigPage = () => {
   const [headingText, setHeadingText] = useState('');
   const [scrollingText, setScrollingText] = useState('');
   const [timerText, setTimerText] = useState('');
-  const [timerDuration, setTimerDuration] = useState(0);
+  const [timerDuration, setTimerDuration] = useState('');
   const [bottomOffsetVh, setBottomOffsetVh] = useState<number>(10);
 
   const [config, setConfig] = useState({
@@ -129,7 +129,7 @@ useEffect(() => {
       const val = snap.val();
       if (val) {
         setTimerText(val.text || '');
-        setTimerDuration(val.duration || 0);
+        setTimerDuration(val.duration || '');
         setBottomOffsetVh(val.bottomOffsetVh);
       }
     });
@@ -734,8 +734,8 @@ useEffect(() => {
           <input
             type="number"
             value={timerDuration}
-            onChange={(e) => setTimerDuration(Number(e.target.value))}
-            placeholder="E.g. 600"
+            onChange={(e) => setTimerDuration(e.target.value as any)}
+            placeholder="E.g. 14.30"
             style={{ width: '100%' }}
           />
         </div>
