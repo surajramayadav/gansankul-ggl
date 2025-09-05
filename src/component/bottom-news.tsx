@@ -166,7 +166,7 @@ const BottomNews = () => {
         left: '50%',
 
         transform: 'translateX(-50%)',
-        width: config.width,
+        width: '100%',
         height: config.height,
         display: 'flex',
         border: `2px solid ${config.backgroundColor}`,

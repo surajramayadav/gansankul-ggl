@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { ref, onValue, set, update, off } from 'firebase/database';
 import { database } from '../firebase';
 
@@ -10,6 +10,8 @@ const ConfigPage = () => {
   const [timerText, setTimerText] = useState('');
   const [timerDuration, setTimerDuration] = useState('');
   const [bottomOffsetVh, setBottomOffsetVh] = useState<number>(10);
+  const [top10Payers, setTop10Payers] = useState<any[]>([]);
+  const [qrCodeLink, setQrCodeLink] = useState<any>();
 
   const [config, setConfig] = useState({
     text: '',
@@ -23,7 +25,8 @@ const ConfigPage = () => {
     location: '',
     logoVisible: true,
     qrVisible: true,
-    bottomOffsetVh: bottomOffsetVh
+    bottomOffsetVh: bottomOffsetVh,
+    isScoreBoard:false
   });
   const [topExtra, setTopExtra] = useState({
     visible: false,
@@ -44,12 +47,52 @@ const ConfigPage = () => {
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
 
- const latestData = useRef({
+   const latestData = useRef({
     section: null,
     common: null,
   });
 
-useEffect(() => {
+
+  function getTop10Payers(data:any) {
+    // Helper: convert Devanagari ०-९ to normal 0-9
+    function normalizeDigits(str:any) {
+      return str.replace(/[०-९]/g, (d:any) => "०१२३४५६७८९".indexOf(d));
+    }
+  
+    const lines = Array.isArray(data) ? data : data.split(/[\n,]+/);
+    const payers:any = [];
+  
+    lines.forEach((line:any) => {
+      line = line.trim();
+      if (!line) return;
+  
+      // Regex supports Marathi + English + multiple currency formats
+      const match = line.match(
+        /(?:धन्यवाद 🙏|Thanks|Thank you)?\s*(.+?)\s*[–-]\s*(?:₹|Rs\.?|USD\$|\$)?\s*([0-9०-९]+)/
+      );
+  
+      if (match) {
+        const name = match[1].trim();
+        const rawAmount = match[2].trim();
+  
+        // Normalize digits to English 0-9
+        const amount = parseInt(normalizeDigits(rawAmount), 10);
+  
+        if (!isNaN(amount)) {
+          payers.push({ name, amount });
+        }
+      }
+    });
+  
+    // Sort by amount descending
+    payers.sort((a:any, b:any) => b.amount - a.amount);
+  
+    return payers.slice(0, 10);
+  }
+  
+
+
+  useEffect(() => {
   const sectionRef = ref(database, `sections/${selected}`);
   const commonRef = ref(database, 'common');
 
@@ -76,6 +119,7 @@ useEffect(() => {
       logoVisible: data.logoVisible !== false,
       bottomOffsetVh: data.bottomOffsetVh || 10,
       qrVisible: data.qrVisible !== false,
+      isScoreBoard:data.isScoreBoard || false
     });
 
     if (selected === 'top') {
@@ -101,6 +145,8 @@ useEffect(() => {
       setBottomMode(bottomCfg.bottomMode || 'heading');
       setHeadingText(bottomCfg.headingText || '');
       setScrollingText(bottomCfg.scrollingText || '');
+      setTop10Payers(getTop10Payers(bottomCfg.headingText || ''));
+
     }
 
     setFetching(false);
@@ -129,7 +175,6 @@ useEffect(() => {
       const val = snap.val();
       if (val) {
         setTimerText(val.text || '');
-        setTimerDuration(val.duration || '');
         setBottomOffsetVh(val.bottomOffsetVh);
       }
     });
@@ -186,6 +231,7 @@ useEffect(() => {
     }));
   };
 
+
   const handleSave = async () => {
     setSaving(true);
     const { location, ...sectionPayload } = config; // ✅ Exclude location
@@ -221,8 +267,19 @@ useEffect(() => {
       )
     );
     await set(ref(database, 'common/location'), config.location);
-    await update(ref(database, 'common'), { logoVisible: config.logoVisible });
-    await update(ref(database, 'common'), { qrVisible: config.qrVisible });
+    await update(ref(database, 'common'), {
+      logoVisible: config.logoVisible,
+      qrVisible: config.qrVisible,
+      scoreBoardVisible: config.isScoreBoard
+    });
+
+    if(config.isScoreBoard){
+      await set(ref(database, 'common/scordboard'), top10Payers);
+    }
+    if(qrCodeLink){
+      await set(ref(database, 'common/qrcode'), qrCodeLink);
+    }
+    
 
     const timerRef = ref(database, 'common/timer');
     set(timerRef, {
@@ -715,11 +772,34 @@ useEffect(() => {
         </label>
       </div>
 
+
+      <div style={{ marginBottom: '15px' }}>
+        <label style={{ display: 'block', marginBottom: '5px' }}>ScoreBoard Visibility:</label>
+        <label style={{ marginRight: '10px' }}>
+          <input
+            type="radio"
+            name="isScoreBoard"
+            value="show"
+            checked={config.isScoreBoard !== false}
+            onChange={() => handleChange('isScoreBoard', true)}
+          /> Show
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="isScoreBoard"
+            value="hide"
+            checked={config.isScoreBoard === false}
+            onChange={() => handleChange('isScoreBoard', false)}
+          /> Hide
+        </label>
+      </div>
+
       <div style={{ marginBottom: '20px' }}>
         <h3>⏳ Countdown Timer</h3>
 
         <div style={{ marginBottom: '8px' }}>
-          <label>Timer Text:</label>
+          <label>Ganpati Name</label>
           <input
             type="text"
             value={timerText}
@@ -729,16 +809,7 @@ useEffect(() => {
           />
         </div>
 
-        <div style={{ marginBottom: '8px' }}>
-          <label>Duration (in seconds):</label>
-          <input
-            type="number"
-            value={timerDuration}
-            onChange={(e) => setTimerDuration(e.target.value as any)}
-            placeholder="E.g. 14.30"
-            style={{ width: '100%' }}
-          />
-        </div>
+     
         <div>
           <label>Timer Bottom Offset (vh):</label>
           <input
@@ -749,6 +820,17 @@ useEffect(() => {
           />
         </div>
       </div>
+     
+
+      <div>
+          <label>QR Code Link:</label>
+          <input
+            type="text"
+            value={qrCodeLink}
+            onChange={(e) => setQrCodeLink(e.target.value)}
+            style={{ marginLeft: 8 ,marginBottom:20}}
+          />
+        </div>
 
       <button
         onClick={handleSave}
